@@ -1,0 +1,112 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<title>ニコニコ○×ゲーム</title>
+
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+	<script src='/_ah/channel/jsapi'></script>
+<!--      <script src='http://talkgadget.google.com/talkgadget/channel.js'></script> -->
+
+	<script type="text/javascript">
+
+$(function(){
+	// テンプレートで置き換わる値
+	var channelId = '{{channel_id}}';
+	var playerId = '{{player_id}}';
+	var status = '{{status}}';
+
+	console.log("initialize");
+	console.log("    channelId :" + channelId);
+	console.log("    playerId  :" + playerId);
+	console.log("    status    :" + status);
+
+	// プレイヤーの表示
+	var playerText = '';
+	if (playerId === 'p1') playerText = 'player1';
+	if (playerId === 'p2') playerText = 'player2';
+	$('#player').text(playerText);
+
+	// ターンの表示
+	var turnText = (status.indexOf(playerId) < 0 ? '待ち' : 'あなたの番です');
+	$('#turn').text(turnText);
+
+	// チャネルの生成
+	var channel = new goog.appengine.Channel(channelId);
+	var socket = channel.open();
+
+	// 更新関数
+	var updateFunc = function(jsonData) {
+		console.log("update");
+		console.log("    status    :" + jsonData.status);
+		console.log("    putPlayer :" + jsonData.putPlayer);
+		console.log("    putIndex  :" + jsonData.putIndex);
+
+		// ステータスの保持
+		status = jsonData.status;
+
+		// ターンの表示
+		var turnText = (jsonData.status.indexOf(playerId) < 0 ? '待ち' : 'あなたの番です');
+		$('#turn').text(turnText);
+
+		// ボードの更新
+		var putText = (jsonData.putPlayer === 'p1' ? '○' : '×');
+		var putIndex = parseInt(jsonData.putIndex);
+		$('td').eq(putIndex).text(putText);
+	};
+
+	// ソケットメッセージリスナー
+	socket.onmessage = function(evt) {
+		console.log("onmessage");
+		console.log("    data    :" + evt.data);
+		jsonData = JSON.parse(evt.data);
+		updateFunc(jsonData);
+	};
+
+	// クリック関数
+	var clickFunction = function() {
+		if (status.indexOf(playerId) < 0) {
+			return;
+		}
+
+		var url = (playerId === 'p1' ? '/player1' : '/player2');
+		var clickIndex = $('td').index(this);
+		var postData = {putIndex:clickIndex};
+
+		console.log("sendData");
+		console.log("    url        :" + url);
+		console.log("    clickIndex :" + clickIndex);
+		//console.log("    postData   :" + postData.toSource());
+
+		$.post(url, postData, updateFunc, 'json');
+	};
+
+	// クリックリスナー登録
+	$('td').click(clickFunction);
+})
+
+	</script>
+
+	<style>
+		td{width:30px; height:30px;
+			text-align: center; }
+	</style>
+</head>
+
+<body>
+	<h1 id="player"></h1>
+	<h1 id="turn"></h1>
+	<table border="2">
+		<tr>
+			<td></td><td></td><td></td>
+		</tr>
+		<tr>
+			<td></td><td></td><td></td>
+		</tr>
+		<tr>
+			<td></td><td></td><td></td>
+		</tr>
+	</table>
+</body>
+</html>

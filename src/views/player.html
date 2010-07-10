@@ -6,8 +6,9 @@
 	<title>ニコニコ○×ゲーム</title>
 
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+
 	<script src='/_ah/channel/jsapi'></script>
-<!--      <script src='http://talkgadget.google.com/talkgadget/channel.js'></script> -->
+<!--      		<script src='http://talkgadget.google.com/talkgadget/channel.js'></script> -->
 
 	<script type="text/javascript">
 
@@ -15,11 +16,13 @@ $(function(){
 	// テンプレートで置き換わる値
 	var channelId = '{{channel_id}}';
 	var playerId = '{{player_id}}';
+	var frame = '{{frame}}';
 	var status = '{{status}}';
 
 	console.log("initialize");
 	console.log("    channelId :" + channelId);
 	console.log("    playerId  :" + playerId);
+	console.log("    frame     :" + frame);
 	console.log("    status    :" + status);
 
 	// プレイヤーの表示
@@ -33,12 +36,21 @@ $(function(){
 	$('#turn').text(turnText);
 
 	// チャネルの生成
-	var channel = new goog.appengine.Channel(channelId);
-	var socket = channel.open();
+//	var channel = new goog.appengine.Channel(channelId);
+//	var socket = channel.open();
 
 	// 更新関数
 	var updateFunc = function(jsonData) {
 		console.log("update");
+		console.log("    frame     :" + jsonData.frame);
+
+		// フレームが変更されていたら更新する
+		if (frame == jsonData.frame) {
+			return;
+		}
+		// フレームの保持
+		frame = jsonData.frame;
+
 		console.log("    status    :" + jsonData.status);
 		console.log("    putPlayer :" + jsonData.putPlayer);
 		console.log("    putIndex  :" + jsonData.putIndex);
@@ -57,12 +69,24 @@ $(function(){
 	};
 
 	// ソケットメッセージリスナー
-	socket.onmessage = function(evt) {
-		console.log("onmessage");
-		console.log("    data    :" + evt.data);
-		jsonData = JSON.parse(evt.data);
-		updateFunc(jsonData);
+//	socket.onmessage = function(evt) {
+//		console.log("onmessage");
+//		console.log("    data    :" + evt.data);
+//		jsonData = JSON.parse(evt.data);
+//		updateFunc(jsonData);
+//	};
+
+	// ポーリング関数
+	var pollingRecive = function(data) {
+		updateFunc(data);
+		setTimeout(polling, 1 * 1000);
 	};
+	var polling = function() {
+		var url = '/polling';
+		var data = {frame:frame};
+		$.get(url, data, pollingRecive, 'json');
+	};
+	setTimeout(polling, 1 * 1000);
 
 	// クリック関数
 	var clickFunction = function() {
